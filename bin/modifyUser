@@ -1,0 +1,429 @@
+#!/bin/sh
+FINDOPTION=$(dialog --title  "Modify menu" --menu  "How do you want to find user for modifying?" 15 60 4 \
+"By_name" ""  \
+"By_IP" "" 3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "You chose:" "$FINDOPTION"
+else
+     clear
+     exec proxy
+fi
+
+if [ "$FINDOPTION" = "By_name" ];  then
+                while true
+                do
+                NAME=$(dialog --title  "Find user by name"  --inputbox  "Enter username:" 10 60 3>&1 1>&2 2>&3)
+                exitstatus=$?
+                if [ $exitstatus = 0 ];  then
+                         echo "Username is:" "$NAME"
+                else
+                        clear
+                        exec /etc/proxyUsers/bin/modifyUser
+                fi
+                 if echo "$NAME" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+                           break 1
+                 else
+			   dialog --title  "Find user by name" --msgbox  "Provided username contains invalid characters. Press Ok to continue..." 10 60
+                           continue
+                fi
+                 done
+        FIND=$(grep -B 1 -A 4 "^$NAME:" /usr/local/etc/squid/passwd)
+		if [ "$FIND" = "" ]; then
+			clear
+			dialog --title  "Find user by name" --msgbox  "User not found!" 10 60
+                        exec /etc/proxyUsers/bin/modifyUser
+		fi
+if (dialog --title  "Is this user that you want to modify??" --yes-button  "Yes" --no-button  "No" --yesno  "$FIND"  10 80)  then
+     echo "You chose Yes"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+
+NOL=$(echo "$FIND" | wc -l)
+if [ $NOL != "5" ]; then
+dialog --title  "Find user by name" --msgbox  "There are MORE than ONE users in search result. Choose another filter or try to find user by IP" 10 60
+exec /etc/proxyUsers/bin/modifyUser
+fi
+
+
+#PREVNAME=$(grep "$NAME" /usr/local/etc/squid/passwd | sed 's/ *:.*//')
+PREVNAME=$(grep -B 1 -A 3 "^$NAME:" /usr/local/etc/squid/passwd | awk 'NR==2' | sed 's/ *:.*//')
+
+    while true
+        do
+            NAME=$(dialog --title  "Modify user"  --inputbox  "Enter NEW username:" 10 60 "$PREVNAME" 3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "Username is:" "$NAME"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/modifyUser
+            fi
+            SNAME=$(grep -B 1 -A 3 "^$NAME:" /usr/local/etc/squid/passwd | awk 'NR==2' | sed 's/ *:.*//')
+            if [ "$NAME" = "$SNAME" ];  then
+                    dialog --title  "Modify user" --msgbox  "Provided username is already in use. Press Ok to continue..." 10 60
+                    continue
+            fi
+            if echo "$NAME" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+                    break 1
+            else
+                    dialog --title  "Modify user" --msgbox  "Provided username contains invalid characters. Press Ok to continue..." 10 60
+                    continue
+            fi
+        done
+PASSGEN=$(env LC_CTYPE=C tr -dc 'A-Za-z0-9#%@&!' < /dev/urandom | head -c 7 ; echo  3>&1 1>&2 2>&3)
+PASSWORD=$(dialog --title  "Modify user" --inputbox  "Enter new user's password:" 10 60 "$PASSGEN"  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's password has been changed!"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+PREVIP=$(echo "$FIND" | grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)')
+			#grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+while true
+        do
+            IP=$(dialog --title  "Modify user"  --inputbox  "Enter user's NEW IP address:" 10 60 "$PREVIP"  3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "User's new IP address is:" "$IP"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/modifyUser
+            fi
+	    SIP=$(grep "$IP" /usr/local/etc/squid/passwd | grep -E -o  '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | grep -m1 "")
+#            if [ "$IP" = "$SIP" ];  then
+#                    dialog --title  "Modify user" --msgbox  "Provided IP is already in use. Press Ok to continue..." 10 60
+#                    continue
+#            fi
+            if echo "$IP" | grep -Eq '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'; then
+			    #grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+                    break 1
+                else
+		    dialog --title  "Modify user" --msgbox  "Provided IP contains invalid characters. Press Ok to continue..." 10 60
+                    continue
+            fi
+        done
+
+PREVADDR=$(echo "$FIND" | grep -m1 "" | sed -n -e 's/^.*-//p') 
+   while true
+        do
+            ADDRESS=$(dialog --title  "Modify user"  --inputbox  "Enter user's NEW department address IN ENGLISH:" 10 60 "$PREVADDR" 3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "User's new department address is:" "$ADDRESS"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/modifyUser
+            fi
+            if echo "$ADDRESS" | grep -Eq '^[A-Za-z0-9#, ._/-]+$'; then
+                    break 1
+                else
+                    continue
+            fi
+        done
+
+ADDRESSUA=$(dialog --title  "Modify user"  --inputbox  "Enter NEW user's department address IN UKRAINIAN:" 10 60 "$ADDRESS"  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's department address in UKRAINIAN  is:" "$ADDRESS"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+clear
+
+
+COMMENT=$(dialog --title  "Modify user"  --inputbox  "Enter NEW comment:" 10 60  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's comment  is:" "$COMMENT"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+clear
+
+NOW=$( date '+%F_%H:%M:%S' )
+MARK='#MARKED_FOE_DELETE#=='
+
+POSITION=$(grep -n "^$PREVNAME:" /usr/local/etc/squid/passwd | cut -f1 -d:)
+INSERTPOSITION=$(($POSITION - 1))
+sed -i '.bak' -e "$INSERTPOSITION i\\
+$MARK" /usr/local/etc/squid/passwd
+vi -e - /usr/local/etc/squid/passwd << @@@
+g/$PREVNAME:/.-1,.+5d
+wq
+@@@
+
+
+#sed -i '.bak' "/$PREVIP/i\\
+#\
+#$MARK\\
+#" /usr/local/etc/squid/passwd
+#sed -i '.bak'  -e "/$PREVIP/,+6d" /usr/local/etc/squid/passwd
+
+
+sed -i '.bak' "/$MARK/a\\
+\#$IP -$ADDRESS\\
+$NAME:\\
+\#Password: $PASSWORD\\
+\#Time: $NOW\\
+\#Comment: $COMMENT\\
+\\
+\\
+" /usr/local/etc/squid/passwd
+sed -i '.bak' -e "/$MARK/d" /usr/local/etc/squid/passwd
+htpasswd -b /usr/local/etc/squid/passwd "$NAME" "$PASSWORD"
+FILE="attributes.docx"
+RETPATH=$(pwd)
+rm -rf /var/tmp/docx
+mkdir /var/tmp/docx
+cp /etc/proxyUsers/docx/$FILE /var/tmp/docx
+cd /var/tmp/docx || exit
+mkdir tmp
+unzip $FILE -d tmp
+cd tmp/word || exit
+sed -i '.bak' "s/ADDR/$ADDRESSUA/" document.xml
+sed -i '.bak' "s/IPADDR/$IP/" document.xml
+sed -i '.bak' "s/NAME/$NAME/" document.xml
+sed -i '.bak' "s/PASSWORD/$PASSWORD/" document.xml
+cd ..
+zip -r ../${FILE} *
+sh -c "cp -a /var/tmp/docx/${FILE} /etc/proxyUsers/attributes/atr_${OPTION}_${NOW}.docx"
+chmod 777 /etc/proxyUsers/attributes/atr_"${OPTION}"_"${NOW}".docx 
+cd "$RETPATH" || exit
+rm -rf /var/tmp/docx
+dialog --title  "Modify user" --msgbox  "SSU proxy user has been modified. Press Ok to continue..." 10 60
+clear
+exec /etc/proxyUsers/bin/proxy
+
+
+elif [ "$FINDOPTION" = "By_IP" ];  then
+                while true
+                do
+                IP=$(dialog --title  "Find user by IP menu"  --inputbox  "Enter user's IP address:" 10 60  3>&1 1>&2 2>&3)
+                exitstatus=$?
+                if [ $exitstatus = 0 ];  then
+                         echo "User's IP address is:" "$IP"
+                else
+                        clear
+                        exec /etc/proxyUsers/bin/modifyUser
+                 fi
+                 if echo "$IP" | grep -Eq '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'; then
+				 #grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+                        break 1
+                 else
+			    dialog --title  "Modify user" --msgbox  "Provided IP contains invalid characters. Press Ok to continue..." 10 60
+                            continue
+                fi
+                done
+	FIND=$(grep -A 5 "$IP" /usr/local/etc/squid/passwd)
+                if [ "$FIND" = "" ]; then
+                        clear
+                        dialog --title  "Find user by name" --msgbox  "User not found!" 10 60
+                        exec /etc/proxyUsers/bin/modifyUser
+                fi
+if (dialog --title  "Is this user that you want to modify??" --yes-button  "Yes" --no-button  "No" --yesno  "$FIND"  10 80)  then
+     echo "You chose Yes"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+
+NOL=$(echo "$FIND" | wc -l)
+if [ $NOL != "5" ]; then
+dialog --title  "Modify user" --msgbox  "There are MORE than ONE users in search result. Choose another filter." 10 60
+exec /etc/proxyUsers/bin/modifyUser
+fi
+
+
+#PREVNAME=$(grep "$NAME" /usr/local/etc/squid/passwd | sed 's/ *:.*//')
+PREVNAME=$(grep -A 4 "$IP" /usr/local/etc/squid/passwd | awk 'NR==2' | sed 's/ *:.*//')
+    while true
+        do
+            NAME=$(dialog --title  "Modify user"  --inputbox  "Enter NEW username:" 10 60 "$PREVNAME" 3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "Username is:" "$NAME"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/modifyUser
+            fi
+            SNAME=$(grep -B 1 -A 3 "^$NAME" /usr/local/etc/squid/passwd | awk 'NR==2' | sed 's/ *:.*//')
+            if [ "$NAME" = "$SNAME" ];  then
+                    dialog --title  "Modify user" --msgbox  "Provided username is already in use. Press Ok to continue..." 10 60
+                    continue
+            fi
+            if echo "$NAME" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+                    break 1
+            else
+                    dialog --title  "Modify user" --msgbox  "Provided username contains invalid characters. Press Ok to continue..." 10 60
+                    continue
+            fi
+        done
+
+#    while true
+#        do
+#            NAME=$(dialog --title  "Modify user"  --inputbox  "Enter NEW username:" 10 60 "$PREVNAME" 3>&1 1>&2 2>&3)
+#            exitstatus=$?
+#            if [ $exitstatus = 0 ];  then
+#                 echo "Username is:" "$NAME"
+#            else
+#                 clear
+#                exec /etc/proxyUsers/bin/modifyUser
+#            fi
+#            if echo "$NAME" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+#                    break 1
+#                else
+#                    continue
+#            fi
+#        done
+
+
+PASSGEN=$(env LC_CTYPE=C tr -dc 'A-Za-z0-9#%@&!' < /dev/urandom | head -c 7 ; echo  3>&1 1>&2 2>&3)
+PASSWORD=$(dialog --title  "Modify user" --inputbox  "Enter new user's password:" 10 60 "$PASSGEN"  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's password has been changed!"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+PREVIP=$(echo "$FIND" |  grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)')
+			 #grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+
+while true
+        do
+            IP=$(dialog --title  "Modify user"  --inputbox  "Enter user's NEW IP address:" 10 60 "$PREVIP"  3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "User's new IP address is:" "$IP"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/modifyUser
+            fi
+            SIP=$(grep "$IP" /usr/local/etc/squid/passwd | grep -E -o  '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | grep -m1 "")
+#            if [ "$IP" = "$SIP" ];  then
+#                    dialog --title  "Modify user" --msgbox  "Provided IP is already in use. Press Ok to continue..." 10 60
+#                    continue
+#            fi
+            if echo "$IP" | grep -Eq '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'; then
+                            #grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+                    break 1
+                else
+                    dialog --title  "Modify user" --msgbox  "Provided IP contains invalid characters. Press Ok to continue..." 10 60
+                    continue
+            fi
+        done
+
+
+
+
+#while true
+#        do
+#            IP=$(dialog --title  "Modify user"  --inputbox  "Enter user's NEW IP address:" 10 60 "$PREVIP"  3>&1 1>&2 2>&3)
+#            exitstatus=$?
+#            if [ $exitstatus = 0 ];  then
+#                 echo "User's new IP address is:" "$IP"
+#            else
+#                 clear
+#                 exec /etc/proxyUsers/bin/modifyUser
+#            fi
+#            if echo "$IP" |  grep -E -o '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'; then
+#			     #grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+#                    break 1
+#                else
+#                    continue
+#            fi
+#        done
+#
+
+
+
+PREVADDR=$(echo "$FIND" | grep -m1 "" | sed -n -e 's/^.*-//p') 
+   while true
+        do
+            ADDRESS=$(dialog --title  "Modify user"  --inputbox  "Enter user's NEW department address IN ENGLISH:" 10 60 "$PREVADDR" 3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "User's new department address is:" "$ADDRESS"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/modifyUser
+            fi
+            if echo "$ADDRESS" | grep -Eq '^[A-Za-z0-9#, ._/-]+$'; then
+                    break 1
+                else
+                    continue
+            fi
+        done
+
+ADDRESSUA=$(dialog --title  "Modify user"  --inputbox  "Enter NEW user's department address IN UKRAINIAN:" 10 60 "$ADDRESS"  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's department address in UKRAINIAN  is:" "$ADDRESS"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+clear
+
+
+COMMENT=$(dialog --title  "Modify user"  --inputbox  "Enter NEW comment:" 10 60  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's comment  is:" "$COMMENT"
+else
+     clear
+     exec /etc/proxyUsers/bin/modifyUser
+fi
+clear
+
+
+
+
+NOW=$( date '+%F_%H:%M:%S' )
+MARK='#MARKED_FOE_DELETE#=='
+sed -i '.bak' "/$PREVIP/i\\
+\
+$MARK\\
+" /usr/local/etc/squid/passwd
+sed -i '.bak'  -e "/$PREVIP/,+6d" /usr/local/etc/squid/passwd
+sed -i '.bak' "/$MARK/a\\
+\#$IP -$ADDRESS\\
+$NAME:\\
+\#Password: $PASSWORD\\
+\#Time: $NOW\\
+\#Comment: $COMMENT\\
+\\
+\\
+" /usr/local/etc/squid/passwd
+sed -i '.bak' -e "/$MARK/d" /usr/local/etc/squid/passwd
+htpasswd -b /usr/local/etc/squid/passwd "$NAME" "$PASSWORD"
+FILE="attributes.docx"
+RETPATH=$(pwd)
+rm -rf /var/tmp/docx
+mkdir /var/tmp/docx
+cp /etc/proxyUsers/docx/$FILE /var/tmp/docx
+cd /var/tmp/docx || exit
+mkdir tmp
+unzip $FILE -d tmp
+cd tmp/word || exit
+sed -i '.bak' "s/ADDR/$ADDRESSUA/" document.xml
+sed -i '.bak' "s/IPADDR/$IP/" document.xml
+sed -i '.bak' "s/NAME/$NAME/" document.xml
+sed -i '.bak' "s/PASSWORD/$PASSWORD/" document.xml
+cd ..
+zip -r ../${FILE} *
+sh -c "cp -a /var/tmp/docx/${FILE} /etc/proxyUsers/attributes/atr_${OPTION}_${NOW}.docx"
+chmod 777 /etc/proxyUsers/attributes/atr_"${OPTION}"_"${NOW}".docx 
+cd "$RETPATH" || exit
+rm -rf /var/tmp/docx
+dialog --title  "Modify user" --msgbox  "SSU proxy user has been modified. Press Ok to continue..." 10 60
+clear
+exec /etc/proxyUsers/bin/proxy
+fi

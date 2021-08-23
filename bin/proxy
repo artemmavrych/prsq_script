@@ -1,0 +1,24 @@
+#!/bin/sh
+sh -c "cp -a /usr/local/etc/squid/passwd /etc/createUser/backup/passwd_${NOW}"
+USROPTION=$(dialog --title  "User menu" --menu  "What do you want to do?" 15 60 4 \
+"Create_user" ""  \
+"Modify_user" "" \
+"Find_user" "" \
+"Delete_user" "" 3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "You chose:" "$USROPTION"
+else
+     clear
+     exit
+fi
+
+if [ "$USROPTION" = "Create_user" ];  then
+	exec /etc/proxyUsers/bin/createUser
+elif [ "$USROPTION" = "Delete_user" ];  then
+        exec /etc/proxyUsers/bin/deleteUser
+elif [ "$USROPTION" = "Find_user" ];  then
+        exec /etc/proxyUsers/bin/findUser
+elif [ "$USROPTION" = "Modify_user" ];  then
+        exec /etc/proxyUsers/bin/modifyUser
+fi

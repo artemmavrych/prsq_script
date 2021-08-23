@@ -1,0 +1,108 @@
+#!/bin/sh
+FINDOPTION=$(dialog --title  "Find menu" --menu  "How do you want to find user?" 15 60 4 \
+"By_name" ""  \
+"By_IP" "" \
+"By_date" "" 3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "You chose:" "$FINDOPTION"
+else
+     clear
+     exec proxy
+fi
+
+if [ "$FINDOPTION" = "By_name" ];  then
+		while true
+        	do
+            	NAME=$(dialog --title  "Find user by name"  --inputbox  "Enter username:" 10 60 3>&1 1>&2 2>&3)
+            	exitstatus=$?
+            	if [ $exitstatus = 0 ];  then
+                	 echo "Username is:" "$NAME"
+            	else
+                	clear
+                 	exec /etc/proxyUsers/bin/findUser
+            	fi
+           	 if echo "$NAME" | grep -Eq '^[A-Za-z0-9#._-]+$'; then
+                 	   break 1
+                 else
+			   dialog --title  "Find user by name" --msgbox  "Provided username contains invalid characters. Press Ok to continue..." 10 60
+                   	   continue
+            	 fi
+        	 done
+	FIND=$(grep -B 1 -A 4 "^$NAME" /usr/local/etc/squid/passwd)
+               if [ "$FIND" = "" ]; then
+                        clear
+                        dialog --title  "Find user by name" --msgbox  "User not found!" 10 60
+                        exec /etc/proxyUsers/bin/findUser
+                fi
+		DEP=$(sed "/^$NAME/q" /usr/local/etc/squid/passwd | tail -r | grep "^###########" | head -1 | sed "s/#//g")
+		FIND="${DEP}
+
+${FIND}"
+        dialog --title  "Find user by name" --msgbox  "Department is: $FIND" 10 80
+        clear
+elif [ "$FINDOPTION" = "By_IP" ];  then
+        	while true
+        	do
+            	IP=$(dialog --title  "Find user by IP menu"  --inputbox  "Enter user's IP address:" 10 60  3>&1 1>&2 2>&3)
+           	exitstatus=$?
+            	if [ $exitstatus = 0 ];  then
+                	 echo "User's IP address is:" "$IP"
+            	else
+                 	clear
+                	exec /etc/proxyUsers/bin/findUser
+           	 fi
+           	 if echo "$IP" | grep -Eq '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'; then
+				 #grep -Eq '^[1-2]{0,1}[0-9]{0,1}[0-9]{1}\.[1-2]{0,1}[0-9]{0,1}[0-9]{1}\.[1-2]{0,1}[0-9]{0,1}[0-9]{1}\.[1-2]{0,1}[0-9]{0,1}[0-9]{1}$'; then
+			         #grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+                    	break 1
+                 else
+			    dialog --title  "Find user by IP" --msgbox  "Provided IP contains invalid characters. Press Ok to continue..." 10 60
+                	    continue
+            	fi
+        	done
+	FIND=$(grep -A 5 "$IP" /usr/local/etc/squid/passwd)
+               if [ "$FIND" = "" ]; then
+                        clear
+                        dialog --title  "Find user by name" --msgbox  "User not found!" 10 60
+                        exec /etc/proxyUsers/bin/findUser
+                fi
+                DEP=$(sed "/#$IP/q" /usr/local/etc/squid/passwd | tail -r | grep "^###########" | head -1 | sed "s/#//g")
+                FIND="${DEP}
+
+${FIND}"
+	dialog --title  "Find user by IP" --msgbox  "Department is: $FIND" 10 80
+	clear
+elif [ "$FINDOPTION" = "By_date" ];  then
+                while true
+                do
+                DATE=$(dialog --title  "Find user by date menu"  --inputbox  "Enter user creation date in format YYYY-MM-DD (Example: 2021-02-12) :" 10 60  3>&1 1>&2 2>&3)
+                exitstatus=$?
+                if [ $exitstatus = 0 ];  then
+                         echo "Date is:" "$DATE"
+                else
+                        clear
+                        exec /etc/proxyUsers/bin/findUser
+                 fi
+                 if echo "$DATE" | grep -Eq '^(20[0-9]{2})\-(0[1-9]|1[0-2])\-(0[1-9]|[1-2][0-9]|3[0-1])$'; then
+				   #grep -Eq '^[0-9]{1,4}\-[0-9]{2}\-[0-9]{2}$'; then
+                        break 1
+                 else
+			    dialog --title  "Find user by date" --msgbox  "Provided date contains invalid characters. Press Ok to continue..." 10 60
+                            continue
+                fi
+                done
+        FIND=$(grep -A 1 -B 3 "$DATE" /usr/local/etc/squid/passwd)
+               if [ "$FIND" = "" ]; then
+                        clear
+                        dialog --title  "Find user by name" --msgbox  "User not found!" 10 60
+                        exec /etc/proxyUsers/bin/findUser
+                fi
+                DEP=$(sed "/#Time: $DATE/q" /usr/local/etc/squid/passwd | tail -r | grep "^###########" | head -1 | sed "s/#//g")
+                FIND="${DEP}
+
+${FIND}"
+        dialog --title  "Find user by date" --msgbox  "Department is: $FIND" 10 80
+        clear
+fi
+exec /etc/proxyUsers/bin/findUser

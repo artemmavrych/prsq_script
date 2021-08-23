@@ -1,0 +1,108 @@
+#!/bin/sh
+FINDOPTION=$(dialog --title  "Delete menu" --menu  "How do you want to find user for deleting?" 15 60 4 \
+"By_name" ""  \
+"By_IP" "" 3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "You chose:" "$FINDOPTION"
+else
+     clear
+     exec proxy
+fi
+
+if [ "$FINDOPTION" = "By_name" ];  then
+                while true
+                do
+                NAME=$(dialog --title  "Find user by name"  --inputbox  "Enter username:" 10 60 3>&1 1>&2 2>&3)
+                exitstatus=$?
+                if [ $exitstatus = 0 ];  then
+                         echo "Username is:" "$NAME"
+                else
+                        clear
+                        exec /etc/proxyUsers/bin/deleteUser
+                fi
+                 if echo "$NAME" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+                           break 1
+                 else
+			   dialog --title  "Find user by name" --msgbox  "Provided username contains invalid characters. Press Ok to continue..." 10 60
+                           continue
+                 fi
+                 done
+        FIND=$(grep -B 1 -A 4 "^$NAME:" /usr/local/etc/squid/passwd)
+		if [ "$FIND" = "" ]; then
+			clear
+			dialog --title  "Find user by name" --msgbox  "User not found!" 10 60
+                        exec /etc/proxyUsers/bin/deleteUser
+		fi
+if (dialog --title  "Is this user that you want to delete?" --yes-button  "Yes" --no-button  "No" --yesno  "$FIND"  10 60)  then
+     echo "You chose Yes"
+else
+     clear
+     exec exec /etc/proxyUsers/bin/deleteUser
+fi
+
+
+NOL=$(echo "$FIND" | wc -l)
+if [ $NOL != "5" ]; then
+dialog --title  "Find user by name" --msgbox  "There are MORE than ONE users in search result. Choose another filter or try to find user by IP" 10 60
+exec /etc/proxyUsers/bin/deleteUser
+fi
+
+
+PREVIP=$(echo "$FIND" | grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)')
+			#grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+#sed -i '.bak'  -e "/$PREVIP/,+6d" /usr/local/etc/squid/passwd
+vi -e - /usr/local/etc/squid/passwd << @@@
+g/$NAME:/.-1,.+5d
+wq
+@@@
+
+dialog --title  "Find  user by name" --msgbox  "User has been successfully deleted!" 10 60
+exec /etc/proxyUsers/bin/deleteUser
+
+elif [ "$FINDOPTION" = "By_IP" ];  then
+                while true
+                do
+                IP=$(dialog --title  "Find user by IP menu"  --inputbox  "Enter user's IP address:" 10 60  3>&1 1>&2 2>&3)
+                exitstatus=$?
+                if [ $exitstatus = 0 ];  then
+                         echo "User's IP address is:" "$IP"
+                else
+                        clear
+                        exec /etc/proxyUsers/bin/deleteUser
+                 fi
+                 if echo "$IP" | grep -Eq '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'; then
+				  #grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+                        break 1
+                 else
+			    dialog --title  "Find user by IP" --msgbox  "Provided IP contains invalid characters. Press Ok to continue..." 10 60
+                            continue
+                fi
+                done
+
+		FIND=$(grep -A 5 "$IP" /usr/local/etc/squid/passwd)
+                if [ "$FIND" = "" ]; then
+                        clear
+                        dialog --title  "Find user by name" --msgbox  "User not found!" 10 60
+                        exec /etc/proxyUsers/bin/deleteUser
+                fi
+if (dialog --title  "Is this user that you want to delete?" --yes-button  "Yes" --no-button  "No" --yesno  "$FIND"  10 60)  then
+     echo "You chose Yes"
+else
+     clear
+     exec /etc/proxyUsers/bin/deleteUser
+fi
+
+NOL=$(echo "$FIND" | wc -l)
+if [ $NOL != "5" ]; then
+dialog --title  "Find user by name" --msgbox  "There are MORE than ONE users in search result. Choose another filter." 10 60
+exec /etc/proxyUsers/bin/deleteUser
+fi
+
+PREVIP=$(echo "$FIND" | grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)')
+			#grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+
+sed -i '.bak'  -e "/$PREVIP/,+6d" /usr/local/etc/squid/passwd
+dialog --title  "Find  user by name" --msgbox  "User has been successfully deleted!" 10 60
+exec /etc/proxyUsers/bin/deleteUser
+fi

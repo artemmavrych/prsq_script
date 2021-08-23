@@ -1,0 +1,235 @@
+#!/bin/sh
+NOW=$( date '+%F_%H:%M:%S' )
+if (dialog --title  "SSU proxy user creation menu" --yes-button  "Yes" --no-button  "No" --yesno  "Do you want to create a new SSU proxy user?" 10 60)  then
+     echo "You chose Yes"
+else
+     clear
+     exec proxy
+fi
+OPTION=$(dialog --title  "SSU proxy user creation menu" --menu  "Choose department:" 15 60 4 \
+"ADMINISTRATORS" "" \
+"Alfa_Muravyi" "" \
+"Aparat_Golovi_SBU" "" \
+"Club_SBU" "" \
+"CMS_AG_SBU" "" \
+"CTZI_GUVB_SBU" "" \
+"DGZ_SBU" "" \
+"DIAZ_SBU" "" \
+"DKIB_DKR_SBU" "" \
+"DKR_SBU" "" \
+"DKZED_SBU" "" \
+"DOD_SBU" "" \
+"DODTL_SBU" "" \
+"DOTZ_SBU" "" \
+"DZND_SBU" "" \
+"FEU_SBU" "" \
+"GDA_SBU" "" \
+"GLAVNAYA_INSPEKCIYA" "" \
+"GSU_SBU" "" \
+"GUK_SBU" "" \
+"GUSBU_Kyiv" "" \
+"GUVB_SBU" "" \
+"SHTAB_ATC_SBU" "" \
+"UPRAVLINNYA_VNUTRISHNOGO_AUDUTU_SBU" "" \
+"URDZK_SBU" "" \
+"USBU_Cherkassy" "" \
+"USBU_Chernihiv" "" \
+"USBU_Doneck" "" \
+"USBU_Kherson" "" \
+"USBU_Krim" "" \
+"USBU_Lviv" "" \
+"USBU_Poltava" "" \
+"USBU_Sumy" "" \
+"USBU_Vinnitsa" "" \
+"USBU_Volyn" "" \
+"USBU_Zaporizhya" "" \
+"USBU_Zhitomir" "" \
+"USZ_SBU" "" \
+"UTZO_DGZ_SBU" "" \
+"UVKR_DKR_SBU_Tarasivska_7" "" \
+"New_Department" "" 3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "You chose:" "$OPTION"
+else
+     clear
+     exec /etc/proxyUsers/bin/createUser
+fi
+            if [ "$OPTION" = "New_Department" ];  then
+                     while true
+                        do
+                                NEWDEP=$(dialog --title  "SSU proxy user creation menu"  --inputbox  "Enter new department:" 10 60 3>&1 1>&2 2>&3)
+                                exitstatus=$?
+                                if [ $exitstatus = 0 ];  then
+                                        echo "New department is:" "$NEWDEP"
+                                 else
+                                        clear
+                                        exec /etc/proxyUsers/bin/createUser
+                                 fi
+                                 SDEP=$(grep -E -o "#################"$NEWDEP"[ #]" /usr/local/etc/squid/passwd | grep -E -o "$NEWDEP" | grep -m1 "" )
+				 if [ "$NEWDEP" = "$SDEP" ];  then
+                                 	dialog --title  "SSU proxy user creation menu" --msgbox  "Provided department name is already in use. Press Ok to continue..." 10 60
+                                 	continue
+                                 fi
+
+                                 if echo "$NEWDEP" | grep -Eq '^[A-Za-z0-9_]+$'; then
+                                        break 1
+                                 else
+                                         dialog --title  "SSU proxy user creation menu" --msgbox  "Provided department name contains invalid characters. Press Ok to continue..." 10 60
+                                         continue
+                                 fi
+                         done
+		echo  >> /usr/local/etc/squid/passwd
+		sed -i '.bak' "1s/^/#############################################################"$NEWDEP" #############################################\n\n/" /usr/local/etc/squid/passwd
+		OPTB='Choose department:" 15 60 4'
+		OPTA='Choose department:" 15 60 4 \\\n"'$NEWDEP'" "" '
+		awk -v aOPTB="$OPTB" -v aOPTA="$OPTA" 'NR==1,/Choose department:" 15 60 4/{sub(aOPTB,aOPTA)} 1' /etc/proxyUsers/bin/createUser > /etc/proxyUsers/bin/tmp
+                chmod +rwx /etc/proxyUsers/bin/tmp
+		mv /etc/proxyUsers/bin/tmp /etc/proxyUsers/bin/createUser
+		OPTION=$NEWDEP
+
+
+
+                OPTBEND='"" 3>&1 1>&2 2>&3)'
+                POSOPTB=$(grep -n "$OPTB" /etc/proxyUsers/bin/createUser | head -1 | cut -f1 -d:)
+                POSOPTBEND=$(grep -n "$OPTBEND" /etc/proxyUsers/bin/createUser | head -1 | cut -f1 -d:)
+                POSOPTB=$(($POSOPTB + 1))
+                POSOPTBEND=$(($POSOPTBEND - 1))
+		sed -n -e  "$POSOPTB, $POSOPTBEND p" /etc/proxyUsers/bin/createUser > /tmp/deps
+		sort /tmp/deps > /tmp/sorted_deps
+		sed -i '.bak' "$POSOPTB, $POSOPTBEND d" /etc/proxyUsers/bin/createUser
+		sed -i '.bak' "/$OPTB/r /tmp/sorted_deps" /etc/proxyUsers/bin/createUser
+		rm -r /tmp/deps
+		rm -r /tmp/sorted_deps
+
+
+            else
+                 clear
+            fi
+
+    while true
+        do
+            NAME=$(dialog --title  "SSU proxy user creation menu"  --inputbox  "Enter username:" 10 60 3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "Username is:" "$NAME"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/createUser
+            fi
+	    SNAME=$(grep -B 1 -A 3 "^$NAME:" /usr/local/etc/squid/passwd | awk 'NR==2' | sed 's/ *:.*//' | grep -m1 "")
+	    if [ "$NAME" = "$SNAME" ];  then
+                    dialog --title  "SSU proxy user creation menu" --msgbox  "Provided username already in use. Press Ok to continue..." 10 60
+                    continue
+	    fi
+            if echo "$NAME" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+                    break 1
+            else
+		    dialog --title  "SSU proxy user creation menu" --msgbox  "Provided username contains invalid characters. Press Ok to continue..." 10 60
+                    continue
+            fi
+        done
+PASSGEN=$(env LC_CTYPE=C tr -dc 'A-Za-z0-9#%@&!' < /dev/urandom | head -c 7 ; echo  3>&1 1>&2 2>&3)
+PASSWORD=$(dialog --title  "SSU proxy user creation menu" --inputbox  "Enter new user's password:" 10 60 "$PASSGEN"  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's password has been created!"
+else
+     clear
+     exec /etc/proxyUsers/bin/createUser
+fi
+PREV_IP=$(sed -n "/$OPTION/{n;p;}" /usr/local/etc/squid/passwd | grep -E -o '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)')
+								  #grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+    while true
+        do
+            IP=$(dialog --title  "SSU proxy user creation menu"  --inputbox  "Enter user's IP address:" 10 60 "$PREV_IP"  3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "User's IP address is:" "$IP"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/createUser
+            fi
+            SIP=$(grep "$IP" /usr/local/etc/squid/passwd | grep -E -o  '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | grep -m1 "")
+#            if [ "$IP" = "$SIP" ];  then
+#                    dialog --title  "SSU proxy user creation menu" --msgbox  "Provided IP is already in use. Press Ok to continue..." 10 60
+#                    continue
+#            fi
+            if echo "$IP" | grep -Eq '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'; then
+                            #grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+                    break 1
+                else
+                    dialog --title  "SSU proxy user creation menu" --msgbox  "Provided IP contains invalid characters. Press Ok to continue..." 10 60
+                    continue
+            fi
+        done
+PREV_ADDRESS=$(sed -n "/$OPTION/{n;p;}" /usr/local/etc/squid/passwd | sed -n -e 's/^.*-//p')
+    while true
+        do
+            ADDRESS=$(dialog --title  "SSU proxy user creation menu"  --inputbox  "Enter user's department address IN ENGLISH:" 10 60 "$PREV_ADDRESS" 3>&1 1>&2 2>&3)
+            exitstatus=$?
+            if [ $exitstatus = 0 ];  then
+                 echo "User's department address is:" "$ADDRESS"
+            else
+                 clear
+                 exec /etc/proxyUsers/bin/createUser
+            fi
+            if echo "$ADDRESS" | grep -Eq '^[A-Za-z0-9#, ._/-]+$'; then
+                    break 1
+                else
+                    continue
+            fi
+        done
+ADDRESSUA=$(dialog --title  "SSU proxy user creation menu"  --inputbox  "Enter user's department address IN UKRAINIAN:" 10 60 "$ADDRESS"  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's department address in UKRAINIAN  is:" "$ADDRESS"
+else
+     clear
+     exec /etc/proxyUsers/bin/createUser
+fi
+
+
+COMMENT=$(dialog --title  "SSU proxy user creation menu"  --inputbox  "Enter comment in ENGLISH:" 10 60  3>&1 1>&2 2>&3)
+exitstatus=$?
+if [ $exitstatus = 0 ];  then
+     echo "User's comment  is:" "$COMMENT"
+else
+     clear
+     exec /etc/proxyUsers/bin/createUser
+fi
+
+
+NOW=$( date '+%F_%H:%M:%S' )
+sed -i '.bak' "/$OPTION/a\\
+\#$IP -$ADDRESS\\
+$NAME:\\
+\#Password: $PASSWORD\\
+\#Time: $NOW\\
+\#Comment: $COMMENT\\
+\\
+\\
+" /usr/local/etc/squid/passwd
+htpasswd -b /usr/local/etc/squid/passwd "$NAME" "$PASSWORD"
+FILE="attributes.docx"
+RETPATH=$(pwd)
+rm -rf /var/tmp/docx
+mkdir /var/tmp/docx
+cp /etc/proxyUsers/docx/$FILE /var/tmp/docx
+cd /var/tmp/docx || exit
+mkdir tmp
+unzip $FILE -d tmp
+cd tmp/word || exit
+sed -i '.bak' "s/ADDR/$ADDRESSUA/" document.xml
+sed -i '.bak' "s/IPADDR/$IP/" document.xml
+sed -i '.bak' "s/NAME/$NAME/" document.xml
+sed -i '.bak' "s/PASSWORD/$PASSWORD/" document.xml
+cd ..
+zip -r ../${FILE} *
+sh -c "cp -a /var/tmp/docx/${FILE} /etc/proxyUsers/attributes/atr_${OPTION}_${NOW}.docx"
+chmod 777 /etc/proxyUsers/attributes/atr_"${OPTION}"_"${NOW}".docx 
+cd "$RETPATH" || exit
+rm -rf /var/tmp/docx
+dialog --title  "SSU proxy user creation menu" --msgbox  "SSU proxy user has been created. Press Ok to continue..." 10 60
+clear
+exec /etc/proxyUsers/bin/proxy
